@@ -67,7 +67,8 @@ public class HeapPage implements Page {
     */
     private int getNumTuples() {        
         // some code goes here
-        return 0;
+    	int numTuples = (int)Math.floor((BufferPool.getPageSize()*8)/(td.getSize()*8+1));
+        return numTuples;
 
     }
 
@@ -76,9 +77,9 @@ public class HeapPage implements Page {
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
     private int getHeaderSize() {        
-        
         // some code goes here
-        return 0;
+    	int headerSize = (int)Math.ceil(this.numSlots/8.0);
+        return headerSize;
                  
     }
     
@@ -112,7 +113,8 @@ public class HeapPage implements Page {
      */
     public HeapPageId getId() {
     // some code goes here
-    throw new UnsupportedOperationException("implement this");
+    //throw new UnsupportedOperationException("implement this");
+    	return this.pid;
     }
 
     /**
@@ -282,7 +284,13 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
-        return 0;
+    	int numEmptySlots = 0;
+    	for (int i=0; i < this.numSlots; i++) {
+    		if (!isSlotUsed(i)) {
+    			numEmptySlots++;
+    		}
+    	}
+        return numEmptySlots;
     }
 
     /**
@@ -290,6 +298,11 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // some code goes here
+    	if (!(i < 0 || i > numSlots)) {
+    		byte headerByte = header[i / 8];
+    		int headerBit = (i % 8);
+    		return (headerByte & (1 << headerBit)) != 0;
+    	}
         return false;
     }
 
@@ -307,7 +320,13 @@ public class HeapPage implements Page {
      */
     public Iterator<Tuple> iterator() {
         // some code goes here
-        return null;
+    	ArrayList<Tuple> tupleArray = new ArrayList<Tuple>();
+    	for (int i=0; i < tuples.length; i++) {
+    		if (isSlotUsed(i)) {
+    			tupleArray.add(tuples[i]);
+    		}
+    	}
+        return tupleArray.iterator();
     }
 
 }
