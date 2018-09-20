@@ -126,7 +126,7 @@ public class HeapFile implements DbFile {
     	private HeapFile heapFile;
     	private TransactionId tid;
     	private Iterator<Tuple> iter;
-    	private int pageNum;
+    	private int pageNum = 0;
     	private int openFlag = 0;
     	
     	public HeapFileIterator(HeapFile heapFile, TransactionId tid) {
@@ -138,7 +138,7 @@ public class HeapFile implements DbFile {
     	@Override
     	public void open() throws DbException, TransactionAbortedException {
     		pageNum = 0;
-    		getTupleIterator(pageNum);
+    		getTupleIterator();
     		openFlag = 1;
     	}
     	
@@ -150,8 +150,7 @@ public class HeapFile implements DbFile {
     			return true;
     		} else {
     			while ((iter == null || !iter.hasNext()) && pageNum < heapFile.numPages()) {
-    				pageNum += 1;
-    				getTupleIterator(pageNum);
+    				getTupleIterator();
     			}
     			return (iter != null && iter.hasNext());
     		}
@@ -178,8 +177,8 @@ public class HeapFile implements DbFile {
     		iter = null;
     	}
     	
-    	public void getTupleIterator(int pageNum) throws DbException, TransactionAbortedException {
-    		PageId pageId = new HeapPageId(heapFile.getId(), pageNum);
+    	public void getTupleIterator() throws DbException, TransactionAbortedException {
+    		PageId pageId = new HeapPageId(heapFile.getId(), pageNum++);
     		HeapPage heapPage = (HeapPage) Database.getBufferPool().getPage(tid, pageId, Permissions.READ_ONLY);
     		iter = heapPage.iterator();
     	}
