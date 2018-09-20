@@ -100,14 +100,13 @@ public class SeqScan implements DbIterator {
         // some code goes here
     	TupleDesc tupleDesc = dbFile.getTupleDesc();
     	int len = tupleDesc.numFields();
-    	//WORK
     	Type[] typeAr = new Type[len];
-    	String[] nameAr = new String[len];
+    	String[] fieldAr = new String[len];
     	for (int i=0; i < len; i++) {
     		typeAr[i] = tupleDesc.getFieldType(i);
-    		nameAr[i] = tableAlias + "." + tupleDesc.getFieldName(i);
+    		fieldAr[i] = tableAlias + "." + tupleDesc.getFieldName(i);
     	}
-        return new TupleDesc(typeAr, nameAr);
+        return new TupleDesc(typeAr, fieldAr);
     }
 
     public boolean hasNext() throws TransactionAbortedException, DbException {

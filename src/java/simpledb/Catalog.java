@@ -41,8 +41,7 @@ public class Catalog {
 			return this.pkeyField;
 		}
 	}
-	
-	private HashMap<String, Table> nameToTable; 
+	 
 	private HashMap<Integer, Table> idToTable;
 
     /**
@@ -51,7 +50,6 @@ public class Catalog {
      */
     public Catalog() {
         // some code goes here
-    	this.nameToTable = new HashMap<String, Table>();
     	this.idToTable = new HashMap<Integer, Table>();
     }
 
@@ -68,7 +66,6 @@ public class Catalog {
         // some code goes here
     	Integer tableId = file.getId();
     	Table table = new Table(file, name, pkeyField);
-    	nameToTable.put(name, table);
     	idToTable.put(tableId, table);
     }
 
@@ -93,9 +90,11 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-    	if (nameToTable.containsKey(name)) {
-    		Table table = nameToTable.get(name);
-    		return table.getFile().getId();
+    	for (Integer key : idToTable.keySet()) {
+    		Table table = idToTable.get(key);
+    		if (table.getName().equals(name)) {
+    			return table.getFile().getId();
+    		}
     	}
     	throw new NoSuchElementException("the table doesn't exist");
     }
@@ -156,7 +155,6 @@ public class Catalog {
     /** Delete all tables from the catalog */
     public void clear() {
         // some code goes here
-    	nameToTable.clear();
     	idToTable.clear();
     }
     

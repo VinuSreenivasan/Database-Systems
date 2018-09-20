@@ -64,7 +64,8 @@ public class TupleDesc implements Serializable {
         // some code goes here
     	if(typeAr.length == 0 || typeAr.length != fieldAr.length) {
     		throw new IllegalArgumentException("type and field array length doesn't match");
-    	} else {
+    	} 
+    	else {
     		tupleFieldList = new TDItem[typeAr.length];
     		for (int i=0; i < typeAr.length; i++) {
     			tupleFieldList[i] = new TDItem(typeAr[i], fieldAr[i]);
@@ -84,7 +85,6 @@ public class TupleDesc implements Serializable {
         // some code goes here
     	tupleFieldList = new TDItem[typeAr.length];
 		for (int i=0; i < typeAr.length; i++) {
-			//WORK
 			tupleFieldList[i] = new TDItem(typeAr[i], "");
 		}
     }
@@ -109,7 +109,7 @@ public class TupleDesc implements Serializable {
     public String getFieldName(int i) throws NoSuchElementException {
         // some code goes here
     	if (i < 0 || i >= tupleFieldList.length) {
-    		throw new NoSuchElementException("i = "+i+" is not a valid field reference");
+    		throw new NoSuchElementException("i is not a valid field reference");
     	}
         return tupleFieldList[i].fieldName;
     }
@@ -127,7 +127,7 @@ public class TupleDesc implements Serializable {
     public Type getFieldType(int i) throws NoSuchElementException {
         // some code goes here
     	if (i < 0 || i >= tupleFieldList.length) {
-    		throw new NoSuchElementException("i = "+i+" is not a valid field reference");
+    		throw new NoSuchElementException("i is not a valid field reference");
     	}
         return tupleFieldList[i].fieldType;
     }
@@ -159,11 +159,11 @@ public class TupleDesc implements Serializable {
      */
     public int getSize() {
         // some code goes here
-    	int size = 0;
+    	int tupleSize = 0;
     	for (int i=0; i<tupleFieldList.length; i++) {
-    		size += tupleFieldList[i].fieldType.getLen();
+    		tupleSize += tupleFieldList[i].fieldType.getLen();
     	}
-        return size;
+        return tupleSize;
     }
 
     /**
@@ -239,7 +239,6 @@ public class TupleDesc implements Serializable {
     	for (int i=0; i < this.numFields(); i++) {
     		desc += this.getFieldType(i).toString()+"("+this.getFieldName(i).toString()+")"+",";
     	}
-    	//WORK
         return desc;
     }
 }
