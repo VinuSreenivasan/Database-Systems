@@ -43,6 +43,7 @@ public class Catalog {
 	}
 	 
 	private HashMap<Integer, Table> idToTable;
+	private HashMap<String, Integer> nameToId;
 
     /**
      * Constructor.
@@ -51,6 +52,7 @@ public class Catalog {
     public Catalog() {
         // some code goes here
     	this.idToTable = new HashMap<Integer, Table>();
+    	this.nameToId = new HashMap<String, Integer>();
     }
 
     /**
@@ -67,6 +69,7 @@ public class Catalog {
     	Integer tableId = file.getId();
     	Table table = new Table(file, name, pkeyField);
     	idToTable.put(tableId, table);
+    	nameToId.put(name, tableId);
     }
 
     public void addTable(DbFile file, String name) {
@@ -90,11 +93,8 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-    	for (Integer key : idToTable.keySet()) {
-    		Table table = idToTable.get(key);
-    		if (table.getName().equals(name)) {
-    			return table.getFile().getId();
-    		}
+    	if (nameToId.containsKey(name)) {
+    		return nameToId.get(name);
     	}
     	throw new NoSuchElementException("the table doesn't exist");
     }
@@ -156,6 +156,7 @@ public class Catalog {
     public void clear() {
         // some code goes here
     	idToTable.clear();
+    	nameToId.clear();
     }
     
     /**
