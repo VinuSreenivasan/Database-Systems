@@ -2,32 +2,41 @@
 	
 	TupleDesc.java:
 	Tuple.java:
-		- We chose array for tupleFieldList, so that it will be easy to return the length in numFields() method and we would know the length while creating the new TupleDesc.
-		- We assumed that typeAr and the fieldAr should be of equal length and should be greater than zero, otherwise we are throwing an IllegalArgumentException.
+		- We chose array for tupleFieldList, so that it will be easy to return the length in numFields() method and we would know
+		  the length while creating the new TupleDesc.
+		- We assumed that typeAr and the fieldAr should be of equal length and should be greater than zero, otherwise we are
+		  throwing an IllegalArgumentException.
 		- From the description given, we know that names may be null.
 
 	Catalog.java:
-		- We created a new class called Table to store the informations such as file, name and pkeyField. This helped in creating getter and setter for those fields and easy to understand.
-		- We created a HashMap called idToTable to store tableid as key and the table as value. This map is used in the below methods to get the corresponding values.
+		- We created a new class called Table to store the informations such as file, name and pkeyField. This helped in creating
+		  getter and setter for those fields and easy to understand.
+		- We created a HashMap called idToTable to store tableid as key and the table as value. This map is used in the below
+		  methods to get the corresponding values.
 		- We created an another HashMap called nameToId to store table name as key and the tableid as value.
 
 	BufferPool.java:
 		- We created a HashMap called cacheMap to store PageId as key and the page as value. This map will help in caching the pages.
 
 	HeapPageId.java:
-		- We concatenated the table number and the page number to create a hashString and then we used in-built function to get the hashCode.
+		- We concatenated the table number and the page number to create a hashString and then we used in-built function to get the
+		  hashCode.
 
 	RecordID.java:
 		- We created the hashCode using in-built function, from pid and the tupleno.
 
 	HeapPage.java:
-		- We have used the formula given in project description to calculate the tuples per page and the number of bytes in the header of a page.
-		- To find whether the slot is filled or not in isSlotUsed method, we have used left shift operator to shift the bit by headerbit number of places as the header byte is in big endian format and then used AND operator to check whether the bit is 0 or 1.
+		- We have used the formula given in project description to calculate the tuples per page and the number of bytes in the
+		  header of a page.
+		- To find whether the slot is filled or not in isSlotUsed method, we have used left shift operator to shift the bit by
+		  headerbit number of places as the header byte is in big endian format and then used AND operator to check whether the
+		  bit is 0 or 1.
 
 	HeapFile.java
 		- We have used RandomAccessFile as mentioned in the project description to seek and read the bufferData from the disk.
 		- The number of pages in the HeapFile is calculated by file.length / bufferpool.PAGE_SIZE
-		- We have created a new class called HeapFileIterator implementing DbFileIterator and then we override the methods with the corresponding informations from the HeapFile.
+		- We have created a new class called HeapFileIterator implementing DbFileIterator and then we override the methods with
+		  the corresponding informations from the HeapFile.
 
 2. Discuss and justify any changes you made to the API.
 	No, We didn’t change any given API.
@@ -37,4 +46,7 @@
 
 4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
 	- Overall we have spent around  20-22 hrs for proj1. 
-	- In Catalog.java, we tried using a single HashMap <Integer, Table> to store the information and use it in all the methods. But this implementation is failed in handleDuplicateNames() test which caught error in getTableId(). This was kind of confusing, and it worked when we used an another HashMap <String,Integer> to store name vs tableid.  The new HashMap seems to handle the duplicates. We took some time to understand the reason for this but didn’t find one.
+	- In Catalog.java, we tried using a single HashMap <Integer, Table> to store the information and use it in all the methods.
+	  But this implementation is failed in handleDuplicateNames() test which caught error in getTableId(). This was kind of
+	  confusing, and it worked when we used an another HashMap <String,Integer> to store name vs tableid.  The new HashMap seems
+	  to handle the duplicates. We took some time to understand the reason for this but didn’t find one.
