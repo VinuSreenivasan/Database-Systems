@@ -16,11 +16,12 @@
 		- We created an another HashMap called nameToId to store table name as key and the tableid as value.
 
 	BufferPool.java:
-		- We created a HashMap called cacheMap to store PageId as key and the page as value. This map will help in caching the pages.
+		- We created a HashMap called cacheMap to store PageId as key and the page as value. This map will help in caching the
+		  pages.
 
 	HeapPageId.java:
-		- We concatenated the table number and the page number to create a hashString and then we used in-built function to get the
-		  hashCode.
+		- We concatenated the table number and the page number to create a hashString and then we used in-built function to get
+		  the hashCode.
 
 	RecordID.java:
 		- We created the hashCode using in-built function, from pid and the tupleno.
