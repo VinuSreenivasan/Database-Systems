@@ -1,8 +1,11 @@
 package simpledb;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -28,7 +31,9 @@ public class BufferPool {
     
     private int numPages;
     
-    private HashMap<PageId, Page> cacheMap;
+    private ConcurrentHashMap<PageId, Page> cacheMap;
+    
+    private AtomicInteger presentNumPages;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -38,7 +43,8 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
     	this.numPages = numPages;
-    	this.cacheMap = new HashMap<PageId, Page>();
+    	this.cacheMap = new ConcurrentHashMap<PageId, Page>();
+    	this.presentNumPages = new AtomicInteger(0);
     }
     
     public static int getPageSize() {
@@ -77,16 +83,15 @@ public class BufferPool {
     		return cacheMap.get(pid);
     	} 
     	else {
-    		if (cacheMap.size() < numPages) {
-    			Catalog catalog = Database.getCatalog();
-    			DbFile file = catalog.getDatabaseFile(pid.getTableId());
-    			Page page = file.readPage(pid);
-    			cacheMap.put(pid, page);
-    			return page;
+    		if (presentNumPages.intValue() >= numPages) {
+    			evictPage();
     		}
-    		else {
-    			throw new DbException("more numPages are requested");
-    		}
+			Catalog catalog = Database.getCatalog();
+			DbFile file = catalog.getDatabaseFile(pid.getTableId());
+			Page page = file.readPage(pid);
+			cacheMap.put(pid, page);
+			presentNumPages.incrementAndGet();
+			return page;
     	}
     }
 
@@ -153,6 +158,15 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+		Catalog catalog = Database.getCatalog();
+		DbFile file = catalog.getDatabaseFile(tableId);
+		ArrayList<Page> dirtyPages = file.insertTuple(tid, t);
+		Iterator<Page> iter = dirtyPages.iterator();
+		while (iter.hasNext()) {
+			Page page = iter.next();
+			page.markDirty(true, tid);
+			cacheMap.put(page.getId(), page);
+		}
     }
 
     /**
@@ -172,6 +186,16 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+    	int tableId = t.getRecordId().getPageId().getTableId();
+		Catalog catalog = Database.getCatalog();
+		DbFile file = catalog.getDatabaseFile(tableId);
+		ArrayList<Page> dirtyPages = file.deleteTuple(tid, t);
+		Iterator<Page> iter = dirtyPages.iterator();
+		while (iter.hasNext()) {
+			Page page = iter.next();
+			page.markDirty(true, tid);
+			cacheMap.put(page.getId(), page);
+		}
     }
 
     /**
@@ -196,6 +220,10 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
+    	if (cacheMap.containsKey(pid)) {
+			cacheMap.remove(pid);
+			presentNumPages.decrementAndGet();
+		}
     }
 
     /**
@@ -205,6 +233,16 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+    	if (cacheMap.containsKey(pid)) {
+    		Page page = cacheMap.get(pid);
+			TransactionId tid = page.isDirty();
+			if (tid != null) {
+				DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+				file.writePage(page);
+				page.markDirty(false, tid);
+				cacheMap.put(pid, page);
+			}
+		}
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -221,6 +259,28 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
+    	Iterator<PageId> iter = cacheMap.keySet().iterator();
+		PageId pid = null;
+		
+		while(iter.hasNext()) {
+			pid = iter.next();
+			if (cacheMap.get(pid).isDirty() == null) {
+				break;
+			}
+		}
+		
+		if (pid == null || cacheMap.get(pid).isDirty() != null) {
+			throw new DbException("Invalid");
+		}
+		
+		try {
+			flushPage(pid);
+		} catch (Exception e) {
+			e.getStackTrace();
+			throw new DbException("Eviction failure");
+		}
+		
+		cacheMap.remove(pid);
+		presentNumPages.decrementAndGet();
     }
-
 }
