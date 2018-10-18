@@ -1,0 +1,34 @@
+1. Describe any design decisions you made, including your choice of page eviction policy. Describe briefly your insertion
+and deletion methods in B+ tree.
+	
+	BufferPool.java:
+		- With the ConcurrentHashMap<PageId, Page> cacheMap created in proj1, we used an AtomicInteger to track the number
+		of present pages in the buffer pool. Whenever we add or remove pid in the cacheMap, the AtomicInteger is adjusted
+		accordingly.
+		- We chose Least Recently Used policy to evict pages whenever there is insufficient space in the buffer pool.
+		- We ensured that flushPage and flushAllPages methods will not evict pages from the buffer pool. flushPage writes
+		any dirty page to disk and mark it as not dirty and leave it in the BufferPool.
+		
+	BTreeFile.java:
+		- As mentioned in the project description page we started with findLeafPage(), and we are assuming that only leaf
+		and internal pages will be passed to this function.
+		- When pgcateg() equal to BTreePageId.LEAF, we just fetch the page from the buffer pool and return it.
+		- If the provided value is null, we recurse on the left-most child every time in order to find the left-most leaf page.
+		Once the correct leaf page is found, we are returning it.
+		- we search through internal nodes until we reaches the leaf page corresponding to the provided key value. we iterate
+		through the entries in the internal page using the interface BTreeEntry and compare the entry value to the provided key
+		value.
+		- splitLeafPage() and splitInternalPage()
+		- stealFromLeafPage(), stealFromLeftInternalPage(), stealFromRightInternalPage(), mergeLeafPages() and mergeInternalPages()
+	Predicate.java:
+	IndexPredicate.java:
+		- We initialize the getters and setters accordingly in Predicate and IndexPredicate class.
+
+2. Discuss and justify any changes you made to the API.
+	No, We didn’t change any given APIs.
+
+3. Describe any missing or incomplete elements of your code.
+	Completed all the exercises given in the project description and ran the Junit tests accordingly to verify the implementations.
+
+4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
+	- Overall we have spent around  30-32 hrs for proj2 and we spent most of our time in implementing BTreeFile class.
