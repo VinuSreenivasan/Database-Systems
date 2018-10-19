@@ -5,24 +5,49 @@ and deletion methods in B+ tree.
 		- With the ConcurrentHashMap<PageId, Page> cacheMap created in proj1, we used an AtomicInteger to track the number
 		of present pages in the buffer pool. Whenever we add or remove pid in the cacheMap, the AtomicInteger is adjusted
 		accordingly.
-		- We chose Least Recently Used policy to evict pages whenever there is insufficient space in the buffer pool.
+		- We chose Least Recently Used policy to evict pages whenever there is an insufficient space in the buffer pool.
 		- We ensured that flushPage and flushAllPages methods will not evict pages from the buffer pool. flushPage writes
 		any dirty page to disk and mark it as not dirty and leave it in the BufferPool.
 		
 	BTreeFile.java:
-		- As mentioned in the project description page we started with findLeafPage(), and we are assuming that only leaf
-		and internal pages will be passed to this function.
+		findLeafPage():
+		- As per project description page we are assuming that only leaf and internal pages will be passed to this function.
 		- When pgcateg() equal to BTreePageId.LEAF, we just fetch the page from the buffer pool and return it.
 		- If the provided value is null, we recurse on the left-most child every time in order to find the left-most leaf page.
 		Once the correct leaf page is found, we are returning it.
 		- we search through internal nodes until we reaches the leaf page corresponding to the provided key value. we iterate
 		through the entries in the internal page using the interface BTreeEntry and compare the entry value to the provided key
 		value.
-		- splitLeafPage() and splitInternalPage()
-		- stealFromLeafPage(), stealFromLeftInternalPage(), stealFromRightInternalPage(), mergeLeafPages() and mergeInternalPages()
+		
+		splitLeafPage() and splitInternalPage():
+		- As per project description, we added the first tuple in the second page to the parent whenever page splits happen.
+		- When splitting the leaf page we copied the key up to the parent page, whereas in internal pages we pushed the key up
+		to the parent page.
+		- After setting the left and right siblings of the leaf pages, the copy key has been inserted into the parent using
+		insertEntry through the BTreeEntry interface and updateParentPointers has been called to update the parent pointers
+		of all the children.
+		- Whenever the Internal page has been split, the corresponding push key is added to parent page after setting the left
+		and right child. At the end the dirty pages and the parent pointers has been updated.
+		
+		stealFromLeafPage(), stealFromLeftInternalPage() and stealFromRightInternalPage():
+		- While deleting the leaf and internal pages, numTuple and numEntries difference has been calculated to see whether
+		it is less than half full.
+		- If the siblings has tuples or entries we can steal from that to balance, and we need to update the parent entries
+		accordingly after updating left and right siblings.
+		- The same applies for internal page as well, after updating the left and right child we need to update entry in the
+		parent page. Finally parent pointers and dirty pages needs to be set accordingly.
+		
+		mergeLeafPages() and mergeInternalPages():
+		- While merging the leaf page, we need to move all tuples from right page to left page and need to adjust the left and
+		right siblings.
+		- We need to delete entry from the parent as well and then we need to set that page as empty for future, which will be
+		used whenever getEmptyPage has been called.
+		- In Internal pages, we do need to the same as leaf pages. We need to move all entries from right page to left and we
+		need to delete the parent entry. Finally we need to update the parent pointers and set the empty pages for later use.
+		
 	Predicate.java:
 	IndexPredicate.java:
-		- We initialize the getters and setters accordingly in Predicate and IndexPredicate class.
+		- We initialize the getters and setters in Predicate and IndexPredicate class which has been used in BTreeFile class.
 
 2. Discuss and justify any changes you made to the API.
 	No, We didn’t change any given APIs.
@@ -31,4 +56,5 @@ and deletion methods in B+ tree.
 	Completed all the exercises given in the project description and ran the Junit tests accordingly to verify the implementations.
 
 4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
-	- Overall we have spent around  30-32 hrs for proj2 and we spent most of our time in implementing BTreeFile class.
+	- Overall we have spent around  22-24 hrs for proj2 and we spent most of our time in understanding and implementing the
+	BTreeFile class.

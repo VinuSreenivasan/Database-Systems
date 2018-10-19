@@ -274,9 +274,6 @@ public class BTreeFile implements DbFile {
 
 		BTreeLeafPage bTreeLeafPage = (BTreeLeafPage) this.getEmptyPage(tid, dirtypages, BTreePageId.LEAF);
 		Iterator<Tuple> iter = page.iterator();
-		
-		// For 2n+1 tuples, an n:n+1 split is done
-		// For 2n tuples, an n:n split is done
 		int totalTuples = page.getNumTuples();
 		for (int i = 0; i < totalTuples/2; i++) {
 			iter.next();
