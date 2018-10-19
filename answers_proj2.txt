@@ -32,18 +32,17 @@ and deletion methods in B+ tree.
 		stealFromLeafPage(), stealFromLeftInternalPage() and stealFromRightInternalPage():
 		- While deleting the leaf and internal pages, numTuple and numEntries difference has been calculated to see whether
 		it is less than half full.
-		- If the siblings has tuples or entries we can steal from that to balance, and we need to update the parent entries
+		- If the siblings has tuples or entries we can steal from them to balance, and the parent entries has been updated
 		accordingly after updating left and right siblings.
-		- The same applies for internal page as well, after updating the left and right child we need to update entry in the
-		parent page. Finally parent pointers and dirty pages needs to be set accordingly.
+		- The same applies for internal page as well, after updating the left and right child we updated entry in the parent
+		page. Finally parent pointers and dirty pages has been updated accordingly.
 		
 		mergeLeafPages() and mergeInternalPages():
-		- While merging the leaf page, we need to move all tuples from right page to left page and need to adjust the left and
-		right siblings.
-		- We need to delete entry from the parent as well and then we need to set that page as empty for future, which will be
-		used whenever getEmptyPage has been called.
-		- In Internal pages, we do need to the same as leaf pages. We need to move all entries from right page to left and we
-		need to delete the parent entry. Finally we need to update the parent pointers and set the empty pages for later use.
+		- While merging the leaf page, we moved all tuples from right page to left page and adjusted the left and right siblings.
+		- We deleted entry from the parent as well and then we set that page as empty for future use, which will be used
+		whenever getEmptyPage has been called.
+		- In Internal pages, we did the same as leaf pages. We moved all entries from right page to left and we deleted 
+		the parent entry. Finally we updated the parent pointers and set the empty pages for later use.
 		
 	Predicate.java:
 	IndexPredicate.java:
@@ -56,5 +55,5 @@ and deletion methods in B+ tree.
 	Completed all the exercises given in the project description and ran the Junit tests accordingly to verify the implementations.
 
 4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
-	- Overall we have spent around  22-24 hrs for proj2 and we spent most of our time in understanding and implementing the
+	- Overall we have spent around 22-24 hrs for proj2 and we spent most of our time in understanding and implementing the
 	BTreeFile class.
