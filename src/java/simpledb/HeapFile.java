@@ -89,6 +89,15 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        PageId pageId = page.getId();
+        int pageNumber = pageId.pageNumber();
+        Database.getBufferPool();
+		int pageSize = BufferPool.getPageSize();
+        byte[] pageData = page.getPageData();
+        RandomAccessFile dbFile = new RandomAccessFile(this.f, "rws");
+        dbFile.skipBytes(pageNumber * pageSize);
+        dbFile.write(pageData);
+        dbFile.close();
     }
 
     /**
@@ -104,16 +113,43 @@ public class HeapFile implements DbFile {
     public ArrayList<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
-        return null;
-        // not necessary for lab1|lab2
+    	int totalPages = numPages();
+    	ArrayList<Page> changePages = new ArrayList<Page>();
+    	for (int i=0; i < totalPages; i++) {
+    		HeapPageId pid = new HeapPageId(this.getId(), i);
+    		HeapPage page = (HeapPage)Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
+    		if (page.getNumEmptySlots() > 0) {
+    			try {
+    				page.insertTuple(t);
+    				changePages.add(page);
+    				return changePages;
+    			} catch (Exception e) {
+    				throw new DbException("cannot insert");
+    			}
+    		}
+    	}
+    	HeapPageId heapPageId = new HeapPageId(this.getId(), totalPages);
+    	HeapPage heapPage = new HeapPage(heapPageId, HeapPage.createEmptyPageData());
+    	heapPage.insertTuple(t);
+    	this.writePage(heapPage);
+    	changePages.add(heapPage);
+    	return changePages;
     }
 
     // see DbFile.java for javadocs
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
         // some code goes here
-        return null;
-        // not necessary for lab1|lab2
+        RecordId recordId = t.getRecordId();
+        PageId pageId = recordId.getPageId();
+        List<Page> changePages = new ArrayList<Page>();
+        if (pageId.getTableId() == this.getId()) {
+        	HeapPage heapPage = (HeapPage)Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
+        	heapPage.deleteTuple(t);
+        	changePages.add(heapPage);
+        	return (ArrayList<Page>) changePages;
+        }
+        throw new DbException("Record id doesn't match");
     }
 
     // see DbFile.java for javadocs

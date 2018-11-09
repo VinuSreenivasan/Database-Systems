@@ -1,0 +1,67 @@
+1. Describe any design decisions you made, including your choice of page eviction policy. If you used something other than a
+nested-loops join, describe the trade offs of the algorithm you chose.
+	
+	src/simpledb/Predicate.java
+	src/simpledb/JoinPredicate.java
+	src/simpledb/Filter.java
+		We have used OrderBy.java and Project.java as a reference for implementing the above files. The setters and getters
+		functions are designed in the same way.
+
+	src/simpledb/Join.java
+		The nested-loops join has been implemented in the fetchNext() function which uses the previously implemented
+		joinPredicate here. Then iterated over the numField values to merge the tuples and the merged tuple is returned.
+		The state of the child iterators persists unless they rewind().
+
+	src/simpledb/HashEquiJoin.java
+		We have used a hash map data structure to store the array list of tuples from DbIterator child2, having the same value
+		for a given field. Then for each tuple in DbIterator child1, if there exists a key in the hash map with the given value
+		then we returned the iterator to the list. Finally, we are returning the merged tuple from DbIterator child1 and child2.
+		We have used to helper functions dataMapLoad() and listAction() to facilitate the used of dataMap in fetchNext() function.
+	
+	src/simpledb/IntegerAggregator.java
+	src/simpledb/StringAggregator.java
+		We have used Aggregate.NO_GROUPING value to decide whether the results should be a pair of the form (groupValue,
+		aggregateValue) or a single tuple of the form (aggregateValue). Type.INT_TYPE is used for comparison to distinguish
+		between IntField and StringField. We are using two hash maps to maintain the running count and sum per group by field.
+		We have a helper function aggregateGroup() which perform the corresponding aggregate based on the parameter passed.
+		We are computing only the count aggregate for StringAggregator().
+		
+	src/simpledb/Aggregate.java
+		We have implemented Aggregate operator which implements the DbIterator interface. The result of the aggregate operator is
+		an aggregate value of an entire group for each call made to next() for which aggregation and the grouping fields are
+		passed in the aggregate constructor.
+
+	src/simpledb/HeapPage.java
+		To insert tuple, we have used getNumEmptySlots() and isSlotUsed() methods which we implemented in the project1.
+		The markSlotUsed is set true while inserting the tuple. While deleting the tuple, we have used isSlotUsed() method to
+		identify whether the is empty or not. After deletion the markSlotUsed has been set to false.
+		
+	src/simpledb/HeapFile.java
+		We have used BufferPool.getPage() method access the pages while doing insertTuple() and deleteTuple(). Based on
+		getNumEmptySlots() method the tuple has been inserted and deleted and the page is added to set of modified pages.
+		writePage() method has been called accordingly from the insertTuple() after adding the tuple and the page is written
+		to the disk.
+		
+	src/simpledb/BufferPool.java
+		insertTuple() and deleteTuple() has been set to call the appropriate methods in the HeapFile that belong to the table
+		being modified. Part of this code has been already implemented in project 2.
+	
+	src/simpledb/Insert.java
+		We are using a tupleInserted flag to track the tuple has been inserted and to return from the from if its already been
+		inserted. This method uses insertTuple() method from BufferPool. Once the tuple has been inserted the flag will be set
+		to true.
+		
+	src/simpledb/Delete.java
+		We are using a tupleDeleted flag to track the tuple has been deleted and to return from the from if its already been
+		deleted. This method uses deleteTuple() method from BufferPool. Once the tuple has been deleted the flag will be set
+		to true.
+	
+	
+2. Discuss and justify any changes you made to the API.
+	No, We didn’t change any given APIs.
+	
+3. Describe any missing or incomplete elements of your code.
+	Completed all the exercises given in the project description and ran the Junit tests accordingly to verify the implementations.
+	
+4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
+	Overall we have spent around 22-24 hrs for proj3.
