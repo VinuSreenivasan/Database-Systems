@@ -47,15 +47,14 @@ nested-loops join, describe the trade offs of the algorithm you chose.
 		being modified. Part of this code has been already implemented in project 2.
 	
 	src/simpledb/Insert.java
-		We are using a tupleInserted flag to track the tuple has been inserted and to return from the from if its already been
+		We are using a tupleInserted flag to track the tuple which has been inserted and to return from it if its already been
 		inserted. This method uses insertTuple() method from BufferPool. Once the tuple has been inserted the flag will be set
 		to true.
 		
 	src/simpledb/Delete.java
-		We are using a tupleDeleted flag to track the tuple has been deleted and to return from the from if its already been
+		We are using a tupleDeleted flag to track the tuple which has been deleted and to return from it if its already been
 		deleted. This method uses deleteTuple() method from BufferPool. Once the tuple has been deleted the flag will be set
 		to true.
-	
 	
 2. Discuss and justify any changes you made to the API.
 	No, We didn’t change any given APIs.
