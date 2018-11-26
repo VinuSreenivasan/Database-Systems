@@ -139,7 +139,7 @@ public class IntHistogram {
         // some code goes here
         String result = "";
         for (int i=0; i < buckets.length; i++) {
-        	result += "(Bucket No " + i + " with " + buckets[i] + ") ";
+        	result += "(Bucket No " + i + " with " + buckets[i] + ")";
         }
         return result;
     }

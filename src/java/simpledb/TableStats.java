@@ -98,7 +98,6 @@ public class TableStats {
     	DbFileIterator iterator =  file.iterator(new TransactionId());
     	Map<Integer, Integer> mins = new HashMap<>();
     	Map<Integer, Integer> maxs = new HashMap<>();
-    	
     	for (int i=0; i < tupleDesc.numFields(); i++) {
     		if (tupleDesc.getFieldType(i).equals(Type.STRING_TYPE)) {
     			stringMap.put(i, new StringHistogram(NUM_HIST_BINS));
@@ -108,7 +107,6 @@ public class TableStats {
     		}
     	}
     	int tupleCount = 0;
-    	
     	try {
     		try {
     			iterator.open();
@@ -130,15 +128,12 @@ public class TableStats {
     		} finally {
     			iterator.rewind();
     		}
-    		
     		this.numTuples = tupleCount;
-    		
     		for (Integer key: mins.keySet()) {
     			if (mins.get(key) <= maxs.get(key)) {
     				intMap.put(key, new IntHistogram(NUM_HIST_BINS, mins.get(key), maxs.get(key)));  				
     			}
     		}
-    		
     		try {
     			while (iterator.hasNext()) {
     				Tuple tuple = iterator.next();

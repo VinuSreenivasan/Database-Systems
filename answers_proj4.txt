@@ -1,0 +1,33 @@
+1. Describe any design decisions you made, including methods for selectivity estimation, join ordering.
+	
+	src/simpledb/IntHistogram.java
+		We computed the mininum and maximum values for every attribute in the table by scanning it once. We have shifted all
+		the data by minimum, so that data from (max, min) is now at (max-min, 0). By shifting the data, we can ignore any special
+		cases for negative values. The bucket width was computed as a double value. We did not use an integer value for bucket
+		width since, the last bucket bin would not be a good representation of the data. Whenever a value needs to be added or
+		searched for, it is always shifted by minimum so that the new value is now (value - min) according to our scale. 
+		Equality and Greater than are implemented and all the other operators are derived from these two operations. For the
+		greater than operation, the fractional part is computed using equality result * (number of integers in fractional width).
+		
+	src/simpledb/TableStats.java
+		We used hash maps for maximum, minimum and histograms for each column respectively. Building tablestats essentially
+		involved the in operations of finding the minimum and maximum for each column, which involved one iteration over the
+		data. Adding every field of each tuple to the respective histograms, which involved another iteration over the data.
+		Implemented estimateScanCost() method and estimateTableCardinality() method accordingly using numpage, ioCostPerPage,
+		totalTuples and selectivity Factor. In estimateSelectivity() method estimated the selectivity of predicate field op
+		constant on the table.
+		
+	src/simpledb/JoinOptimizer.java
+		Implemented estimateJoinCost() method to estimate the cost of join using the formula mentioned in the project page
+		with the assumption of the join is an NL join. Implemented estimateJoinCardinality() method to estimate the number
+		of tuples output by join using card1, card2, t1pkey and t2pkey.
+
+	
+2. Discuss and justify any changes you made to the API.
+	No, We didn’t change any given APIs.
+	
+3. Describe any missing or incomplete elements of your code.
+	Completed all the exercises given in the project description and ran the Junit tests accordingly to verify the implementations.
+	
+4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
+	Overall we have spent around 20-22 hrs for proj4.
