@@ -65,6 +65,12 @@ public class TableStats {
      * histograms.
      */
     static final int NUM_HIST_BINS = 100;
+    
+    private final int ioCostPerPage;
+    private final Map<Integer, IntHistogram> intMap = new HashMap<>();
+    private final Map<Integer, StringHistogram> stringMap = new HashMap<>();
+    private final int numPage;
+    private final int numTuples;
 
     /**
      * Create a new TableStats object, that keeps track of statistics on each
@@ -85,6 +91,74 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
+    	
+    	this.ioCostPerPage = ioCostPerPage;
+    	DbFile file = Database.getCatalog().getDatabaseFile(tableid);
+    	TupleDesc tupleDesc = file.getTupleDesc();
+    	DbFileIterator iterator =  file.iterator(new TransactionId());
+    	Map<Integer, Integer> mins = new HashMap<>();
+    	Map<Integer, Integer> maxs = new HashMap<>();
+    	
+    	for (int i=0; i < tupleDesc.numFields(); i++) {
+    		if (tupleDesc.getFieldType(i).equals(Type.STRING_TYPE)) {
+    			stringMap.put(i, new StringHistogram(NUM_HIST_BINS));
+    		} else {
+    			mins.put(i, Integer.MAX_VALUE);
+    			maxs.put(i, Integer.MIN_VALUE);
+    		}
+    	}
+    	int tupleCount = 0;
+    	
+    	try {
+    		try {
+    			iterator.open();
+    			while (iterator.hasNext()) {
+    				Tuple tuple = iterator.next();
+    				tupleCount++;
+    				for (int i=0; i < tupleDesc.numFields(); i++) {
+    					if (tupleDesc.getFieldType(i).equals(Type.INT_TYPE)) {
+    						IntField intField = (IntField) tuple.getField(i);
+    						if (intField.getValue() < mins.get(i)) {
+    							mins.put(i, intField.getValue());
+    						}
+    						if (intField.getValue() > maxs.get(i)) {
+    							maxs.put(i, intField.getValue());
+    						}
+    					}
+    				}
+    			}
+    		} finally {
+    			iterator.rewind();
+    		}
+    		
+    		this.numTuples = tupleCount;
+    		
+    		for (Integer key: mins.keySet()) {
+    			if (mins.get(key) <= maxs.get(key)) {
+    				intMap.put(key, new IntHistogram(NUM_HIST_BINS, mins.get(key), maxs.get(key)));  				
+    			}
+    		}
+    		
+    		try {
+    			while (iterator.hasNext()) {
+    				Tuple tuple = iterator.next();
+    				for (Integer key: intMap.keySet()) {
+    					IntField field = (IntField) tuple.getField(key);
+    					intMap.get(key).addValue(field.getValue());
+    				}
+    				for (Integer key : stringMap.keySet()) {
+    					StringField field = (StringField) tuple.getField(key);
+    					stringMap.get(key).addValue(field.getValue());
+    				}
+    			}
+    		} finally {
+    			iterator.close();
+    		}
+    	} catch (Exception e) {
+    		throw new RuntimeException(e);
+    	}
+    	int pageSize = BufferPool.getPageSize();
+    	this.numPage = (this.numTuples * tupleDesc.getSize()/pageSize);
     }
 
     /**
@@ -101,7 +175,7 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // some code goes here
-        return 0;
+        return this.numPage * this.ioCostPerPage;
     }
 
     /**
@@ -115,7 +189,7 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // some code goes here
-        return 0;
+    	return (int) (totalTuples() * selectivityFactor);
     }
 
     /**
@@ -148,7 +222,11 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
-        return 1.0;
+        if (intMap.containsKey(field)) {
+        	return intMap.get(field).estimateSelectivity(op, ((IntField)constant).getValue());
+        } else {
+        	return stringMap.get(field).estimateSelectivity(op, ((StringField)constant).getValue());
+        }
     }
 
     /**
@@ -156,7 +234,10 @@ public class TableStats {
      * */
     public int totalTuples() {
         // some code goes here
-        return 0;
+        return this.numTuples;
     }
 
+    public String toString() {
+    	return intMap.toString();
+    }
 }

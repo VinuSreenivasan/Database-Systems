@@ -4,6 +4,12 @@ package simpledb;
  */
 public class IntHistogram {
 
+	private int numTuples = 0;
+	private final int min;
+	private final int max;
+	private final int[] buckets;
+	private final double width;
+	
     /**
      * Create a new IntHistogram.
      * 
@@ -22,15 +28,29 @@ public class IntHistogram {
      */
     public IntHistogram(int buckets, int min, int max) {
     	// some code goes here
+    	this.min = min;
+    	this.max = max + 1;
+    	this.buckets = new int[Math.min(max - min + 1, buckets)];
+    	this.width = (max - min + 1.0)/this.buckets.length;
     }
 
+    
+    private int getIndex(int v) {
+    	return (int) ((v - min)/width);
+    }
+    
     /**
      * Add a value to the set of values that you are keeping a histogram of.
      * @param v Value to add to the histogram
      */
     public void addValue(int v) {
     	// some code goes here
+    	int index = getIndex(v);
+    	buckets[index]++;
+    	numTuples++;
     }
+    
+    
 
     /**
      * Estimate the selectivity of a particular predicate and operand on this table.
@@ -43,9 +63,59 @@ public class IntHistogram {
      * @return Predicted selectivity of this particular operator and value
      */
     public double estimateSelectivity(Predicate.Op op, int v) {
-
     	// some code goes here
-        return -1.0;
+    	switch (op) {
+    	case LESS_THAN:
+    		if (v <= min) {
+    			return 0.0;
+    		} else if (v >= max) {
+    			return 1.0;
+    		} else {
+    			int index = getIndex(v);
+    			double count = 0;
+    			for (int i=0; i < index; i++) {
+    				count += buckets[i];
+    			}
+    			double offset = v - min - index * width;
+    			count += (offset / width) * buckets[index];
+    			return count/numTuples;
+    		}
+    	case LESS_THAN_OR_EQ:
+    		if (v + 1 <= min) {
+    			return 0.0;
+    		} else if (v + 1 >= max) {
+    			return 1.0;
+    		} else {
+    			int index = getIndex(v+1);
+    			double count = 0;
+    			for (int i=0; i < index; i++) {
+    				count += buckets[i];
+    			}
+    			double offset = v - min - index * width + 1;
+    			count += (offset / width) * buckets[index];
+    			return count / numTuples;
+    		}
+    	case GREATER_THAN:
+    		return 1 - estimateSelectivity(Predicate.Op.LESS_THAN_OR_EQ, v);
+    	case GREATER_THAN_OR_EQ:
+    		return 1 - estimateSelectivity(Predicate.Op.LESS_THAN, v);
+    	case EQUALS:
+    		if (v <= min) {
+    			return 0.0;
+    		} else if (v >= max) {
+    			return 0.0;
+    		} else {
+    			int index = getIndex(v);
+    			double count = buckets[index];
+    			return (count / width) / (numTuples);
+    		}
+    	case NOT_EQUALS:
+    		return 1 - estimateSelectivity(Predicate.Op.EQUALS, v);
+    	case LIKE:
+    		return estimateSelectivity(Predicate.Op.EQUALS, v);
+    	default:
+    		throw new RuntimeException("default case");
+    	}
     }
     
     /**
@@ -67,6 +137,10 @@ public class IntHistogram {
      */
     public String toString() {
         // some code goes here
-        return null;
+        String result = "";
+        for (int i=0; i < buckets.length; i++) {
+        	result += "(Bucket No " + i + " with " + buckets[i] + ") ";
+        }
+        return result;
     }
 }
