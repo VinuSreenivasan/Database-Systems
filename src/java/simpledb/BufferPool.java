@@ -5,257 +5,147 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+enum LockType{sharedLocks, exclusivelocks}
 
-class LockManager {
+class LockData{
+	LockType lockType;
+	ArrayList<TransactionId> transactionCurPage;
+	
+	LockData(LockType lockType, ArrayList<TransactionId> t){
+		this.lockType = lockType;
+		this.transactionCurPage = t;
+	}
+}
+
+class LockManager{
+	ConcurrentHashMap<TransactionId, ArrayList<PageId>> xactMap = new ConcurrentHashMap<TransactionId, ArrayList<PageId>>();
+	ConcurrentHashMap<PageId, LockData> pageLockMap = new ConcurrentHashMap<PageId, LockData>();
+	
+	private synchronized void block(long start, long timeout) throws TransactionAbortedException {
 		
-	private final HashMap<PageId, HashSet<TransactionId>> sharedLocks;
-	private final HashMap<PageId, TransactionId> exclusiveLocks;
-	private final HashMap<TransactionId, HashSet<PageId>> sharedPages;
-	private final HashMap<TransactionId, HashSet<PageId>> exclusivePages;
-	private final long sleepTime;
-	private final long timeOutTime;
-	
-	public LockManager(long sleepTime, long timeOutTime) {
-		this.exclusiveLocks = new HashMap<PageId, TransactionId>();
-		this.sharedLocks =  new HashMap<PageId, HashSet<TransactionId>>();
-		this.sharedPages = new HashMap<TransactionId, HashSet<PageId>>();
-		this.exclusivePages = new HashMap<TransactionId, HashSet<PageId>>();	
-		this.sleepTime = sleepTime;
-		this.timeOutTime = timeOutTime;
-	}
-	
-	public LockManager() {
-		this.exclusiveLocks = new HashMap<PageId, TransactionId>();
-		this.sharedLocks =  new HashMap<PageId, HashSet<TransactionId>>();
-		this.sharedPages = new HashMap<TransactionId, HashSet<PageId>>();
-		this.exclusivePages = new HashMap<TransactionId, HashSet<PageId>>();
-		this.sleepTime = 20;
-		this.timeOutTime = 200;
-	}
-	
-	public synchronized boolean acquireLock(TransactionId tid, PageId pid, Permissions perm) throws TransactionAbortedException {
-		if (perm.equals(Permissions.READ_ONLY)) {
-			long start = System.currentTimeMillis();
-			while(!acquireReadLock(tid, pid)) {
-				try {
-					Random rand = new Random();
-					Thread.sleep(this.sleepTime + rand.nextInt(10));
-				} catch (Exception e){
-					e.printStackTrace();
-					System.out.println("Error occured while waiting");
-				}
-				long current = System.currentTimeMillis();
-				if (current - start > this.timeOutTime) {
-					releasePage(tid, pid);
-					throw new TransactionAbortedException();
-				}
-			}
-			return true;
+		if (System.currentTimeMillis() - start > timeout) {
+			throw new TransactionAbortedException();
 		}
-		if (perm.equals(Permissions.READ_WRITE)) {
-			long start = System.currentTimeMillis();
-			while(!acquireReadWriteLock(tid, pid)) {
-				try {
-					Random rand = new Random();
-					Thread.sleep(this.sleepTime + rand.nextInt(10));
-				} catch (Exception e) {
-					e.printStackTrace();
-					System.out.println("Error occured while waiting");
-				}		
-				long current = System.currentTimeMillis();
-				if (current - start > this.timeOutTime) {
-					releasePage(tid, pid);
-					throw new TransactionAbortedException();
-				}
+		
+		try {
+			wait(timeout);
+			if (System.currentTimeMillis() - start > timeout) {
+				throw new TransactionAbortedException();
 			}
-			return true;
-		}
-		else {
-			throw new IllegalArgumentException("Only read and read write are acceptaple");
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 	
-	private boolean acquireReadLock(TransactionId tid, PageId pid) {
-		// if doesn't have the exclusive lock yet
-		if (!exclusiveLocks.containsKey(pid)) {	
-			if (sharedLocks.containsKey(pid)) {
-				sharedLocks.get(pid).add(tid);
-			}
-			if (!sharedLocks.containsKey(pid)) {
-				HashSet<TransactionId> tids = new HashSet<>();
-				tids.add(tid);
-				sharedLocks.put(pid, tids);	
-			}
-			if (sharedPages.containsKey(tid)) {
-				sharedPages.get(tid).add(pid);
-			}
-			if (!sharedPages.containsKey(tid)) {
-				HashSet<PageId> pids = new HashSet<>();
-				pids.add(pid);
-				sharedPages.put(tid, pids);	
-			}
-			return true;
-		} 
-		// if it has write lock
-		else {
-			TransactionId exclusiveTransaction = exclusiveLocks.get(pid);
-			if (exclusiveTransaction != null && exclusiveTransaction.equals(tid)) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-	}
-	
-	private boolean acquireReadWriteLock(TransactionId tid, PageId pid) {
-		TransactionId notNullTd;
-		if (tid == null) {
-			notNullTd = new TransactionId();
-		}
-		else {
-			notNullTd = tid;
-		}
-		if (exclusiveLocks.containsKey(pid)) {
-			if (exclusiveLocks.get(pid).equals(notNullTd)) {		
-				return true;
-			}
-			return false;
-		}
-		else {
-			if (sharedLocks.containsKey(pid)) {		
-				HashSet<TransactionId> tids = sharedLocks.get(pid);
-				if (tids.contains(tid)) {
-					if (tids.size() == 1) {
-						exclusiveLocks.put(pid, notNullTd);
-						if (exclusivePages.containsKey(tid)) {
-							exclusivePages.get(tid).add(pid);
+	public synchronized void acquireLock(TransactionId tid, PageId pid, LockType type) throws TransactionAbortedException {
+		
+		long begin = System.currentTimeMillis();
+		Random random = new Random();
+		long timeout = random.nextInt(2000);
+		
+		while(true) {
+			if (pageLockMap.containsKey(pid)) {
+				
+				if (pageLockMap.get(pid).lockType == LockType.sharedLocks) {
+					
+					if (type == LockType.sharedLocks) {
+						
+						if (!(pageLockMap.get(pid).transactionCurPage.contains(tid))) {
+							pageLockMap.get(pid).transactionCurPage.add(tid);
 						}
-						else {
-							HashSet<PageId> pids = new HashSet<>();
-							pids.add(pid);
-							exclusivePages.put(notNullTd, pids);
+						
+						updateXactMap(tid, pid);
+						return;
+						
+					} else {
+						if ((pageLockMap.get(pid).transactionCurPage.size() == 1) && (pageLockMap.get(pid).transactionCurPage.get(0) == tid) && (xactMap.containsKey(tid)) && (xactMap.get(tid).contains(pid))) {
+							pageLockMap.get(pid).lockType = LockType.exclusivelocks;
+							return;
+						} else {
+							block(begin, timeout);
 						}
-						sharedLocks.get(pid).remove(notNullTd);
-						if (sharedLocks.get(pid).size() == 0) {
-							sharedLocks.remove(pid);
-						}
-						if (sharedPages.containsKey(notNullTd)) {
-							sharedPages.get(notNullTd).remove(pid);
-							if (sharedPages.get(notNullTd).size() == 0) {
-								sharedPages.remove(notNullTd);
-							}
-						}				
-						return true;
 					}
-					else {	
-						return false;
-					}
+					
 				} else {
-					return false;
+					if (pageLockMap.get(pid).transactionCurPage.get(0) != tid) {
+						block(begin, timeout);
+					} else {
+						return;
+					}
 				}
+				
+			} else {
+				updateXactMap(tid, pid);
+				ArrayList<TransactionId> t = new ArrayList<TransactionId>();
+				t.add(tid);
+				pageLockMap.put(pid, new LockData(type, t));
+				return;
 			}
-			else {
-				exclusiveLocks.put(pid, notNullTd);	
-				if (exclusivePages.containsKey(notNullTd)) {
-					exclusivePages.get(notNullTd).add(pid);
-				}
-				else {
-					HashSet<PageId> pids = new HashSet<PageId>();
-					pids.add(pid);
-					exclusivePages.put(notNullTd, pids);
-				}		
-				return true;
+		}
+	}
+	
+	private synchronized void updateXactMap(TransactionId tid, PageId pid) {
+		
+		if (xactMap.containsKey(tid)) {
+			if (xactMap.get(tid).contains(pid)) {
+				return;
+			} else {
+				xactMap.get(tid).add(pid);
+			}
+		} else {
+			ArrayList<PageId> pageList = new ArrayList<PageId>();
+			pageList.add(pid);
+			xactMap.put(tid, pageList);
+		}
+	}
+	
+	public synchronized void releaseLock(TransactionId tid, PageId pid) {
+		
+		if (xactMap.containsKey(tid)) {
+			xactMap.get(tid).remove(pid);
+			
+			if (xactMap.get(tid).size() == 0) {
+				xactMap.remove(tid);
+			}
+		}
+		
+		if (pageLockMap.containsKey(pid)) {
+			pageLockMap.get(pid).transactionCurPage.remove(tid);
+			
+			if (pageLockMap.get(pid).transactionCurPage.size() == 0) {
+				pageLockMap.remove(pid);
+			} else {
+				notify();
+			}
+		}
+	}
+	
+	public synchronized void releaseAllLocks(TransactionId tid) {
+		
+		if (xactMap.containsKey(tid)) {
+			PageId[] pages = new PageId[xactMap.get(tid).size()];
+			PageId[] pageRelease = xactMap.get(tid).toArray(pages);
+			
+			for (PageId pid: pageRelease) {
+				releaseLock(tid, pid);
 			}
 		}
 	}
 	
 	public synchronized boolean holdsLock(TransactionId tid, PageId pid) {
-		if (sharedLocks.containsKey(pid) && sharedLocks.get(pid).contains(tid)) {
-			return true;
-		}
-		if (exclusiveLocks.containsKey(pid) && exclusiveLocks.get(pid).equals(tid)) {
-			return true;
+		
+		if (xactMap.containsKey(tid)) {
+			if (xactMap.get(tid).contains(pid)) {
+				return true;
+			}
 		}
 		return false;
-	}
-	
-	public synchronized void releasePage(TransactionId tid, PageId pid) {
-		if (tid != null && pid != null) {
-			if (sharedPages.containsKey(tid)) {
-				sharedPages.get(tid).remove(pid);
-			}
-			if (exclusivePages.containsKey(tid)) {
-				exclusivePages.get(tid).remove(pid);
-			}
-			if (sharedLocks.containsKey(pid)) {
-				sharedLocks.get(pid).remove(tid);
-			}
-			if (exclusiveLocks.containsKey(pid)) {
-				exclusiveLocks.remove(pid);
-			}
-		}
-		else if (tid == null) {
-			if (sharedLocks.containsKey(pid)) {		
-				HashSet<TransactionId> tids = sharedLocks.get(pid);
-				for (TransactionId transaction: tids) {
-					if (sharedPages.containsKey(transaction)) {
-						sharedPages.get(transaction).remove(pid);
-						if (sharedPages.get(transaction).size() == 0) {
-							sharedPages.remove(transaction);
-						}
-					}
-				}
-				sharedLocks.remove(pid);
-			}
-			if (exclusiveLocks.containsKey(pid)) {
-				TransactionId transaction = exclusiveLocks.get(pid);	
-				if (exclusivePages.containsKey(transaction)) {
-					exclusivePages.get(transaction).remove(pid);
-					if (exclusivePages.get(transaction).size() == 0) {
-						exclusivePages.remove(transaction);
-					}
-				}
-				exclusiveLocks.remove(pid);
-			}
-		}
-		else if (pid == null) {	
-			if (sharedPages.containsKey(tid)) {
-				HashSet<PageId> pids = sharedPages.get(tid);
-				for (PageId pageID: pids) {
-					if (sharedLocks.containsKey(pageID)) {
-						sharedLocks.get(pageID).remove(tid);
-						if (sharedLocks.get(pageID).size() == 0) {
-							sharedLocks.remove(pageID);
-						}
-					}
-				}
-				sharedPages.remove(tid);			
-			}
-			if (exclusivePages.containsKey(tid)) {
-				HashSet<PageId> pids = exclusivePages.get(tid);	
-				for (PageId pageID: pids) {
-					if (exclusiveLocks.containsKey(pageID)) {
-						exclusiveLocks.remove(pageID);
-					}
-				}
-				exclusivePages.remove(tid);
-			}
-		}
-	}
-	
-
-	public synchronized Set<PageId> getDirtiedPages(TransactionId tid) {
-		Set<PageId> result = new HashSet<>();
-		if (exclusivePages.containsKey(tid)) {
-			result.addAll(exclusivePages.get(tid));
-		}
-		return result;
 	}
 }
 
@@ -334,7 +224,17 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
-    	lockManager.acquireLock(tid, pid, perm);
+    	
+    	LockType lockType;
+    	
+    	if (perm == Permissions.READ_ONLY) {
+    		lockType = LockType.sharedLocks;
+    	} else {
+    		lockType = LockType.exclusivelocks; 
+    	}
+    	
+    	lockManager.acquireLock(tid, pid, lockType);
+    	
     	if (cacheMap.containsKey(pid)) {
     		return cacheMap.get(pid);
     	} 
@@ -363,7 +263,7 @@ public class BufferPool {
     public  void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2|lab3|lab4
-    	lockManager.releasePage(tid, pid);
+    	lockManager.releaseLock(tid, pid);
     }
 
     /**
@@ -395,27 +295,21 @@ public class BufferPool {
         throws IOException {
         // some code goes here
         // not necessary for lab1|lab2|lab3|lab4
-    	if (commit) {
-    		Set<PageId> dirtyPages = lockManager.getDirtiedPages(tid);
-    		for (PageId pid: dirtyPages) {
-    			Page page = this.cacheMap.get(pid);
-    			if (tid.equals(page.isDirty())) {
-    				flushPage(pid);
-    				page.setBeforeImage();
-    			}
-    		}
-    	} else {
-    		Set<PageId> dirtyPages = lockManager.getDirtiedPages(tid);
-    		for (PageId pid: dirtyPages) {
-    			cacheMap.remove(pid);
-    			try {
-    				getPage(tid, pid, Permissions.READ_ONLY);
-    			} catch (Exception e) {
-    				e.printStackTrace();
+    	List<PageId> xactLockedPages = lockManager.xactMap.get(tid);
+    	
+    	if (xactLockedPages != null) {
+    		
+    		for (PageId pageId: xactLockedPages) {
+    			
+    			if (commit) {
+    				flushPage(pageId);
+    			} else if (cacheMap.get(pageId) != null && cacheMap.get(pageId).isDirty() != null) {
+    				discardPage(pageId);
     			}
     		}
     	}
-    	lockManager.releasePage(tid, null);
+    	
+    	lockManager.releaseAllLocks(tid);
     }
 
     /**
@@ -533,11 +427,11 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2|lab3|lab4
-    	Set<PageId> dirtyPages = lockManager.getDirtiedPages(tid);
-    	for (PageId pid: dirtyPages) {
-    		flushPage(pid);
-    		Page page = this.cacheMap.get(pid);
-    		page.setBeforeImage();
+    	if (lockManager.xactMap.containsKey(tid)) {
+    		ArrayList<PageId> pagesFlush = lockManager.xactMap.get(tid);
+    		for (PageId pageId : pagesFlush) {
+    			flushPage(pageId);
+    		}
     	}
     }
 
@@ -569,7 +463,6 @@ public class BufferPool {
 			throw new DbException("Eviction failure");
 		}
 		
-		lockManager.releasePage(null, pid);
 		cacheMap.remove(pid);
 		presentNumPages.decrementAndGet();
     }
