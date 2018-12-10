@@ -1,9 +1,22 @@
 1. Describe any design decisions you made, including your deadlock detection policy, locking granularity, etc.
 	
 	src/simpledb/Bufferpool.java
-		We maintained two concurrent maps for storing transactions and locks. Although one map is sufficient, i.e. one with the key as transaction id and the value as a list of lock information containing page id of lock, type of lock. But with two maps, retrieval of information is easier. The first map maintains an array list of all page ids for a transaction and the second one maintains the information of all locks for a pageid.
-		For eviction policy, we removed a random page whichever is not dirty. Previously we used LRU, but for this lab we felt this approach is relevant and easier.
-		For deadlock, we used a timeout policy which aborts the transaction after a random time t (less than 2 sec). We wait for the locks to get released during the timeout. If the locks are released, a notify all signal is sent and the transaction can acquire them. If not we just send a transactionAborted exception, which is dealt with by the higher level code. 
+		To implement locking machanism, we have implemented two concurrent maps for storing transactions and locks
+		respectively. With two maps which can retrive the needed information was easier to use. First map used an
+		array list of page ids for transaction and the second map maintains the information of all locks for a pageid.
+		For eviction policy, we have implement a machanism to remove a random page which is not dirty. Previously we were
+		using LRU approach for eviction, but for this project we are following this approach as mentioned in the project
+		description page. For deadlock conditions we have used a timeout policy which aborts the transaction after a random
+		time. We will wait for the locks to get released whenever the timeout happens. If the locks are released, a signal
+		is sent and the transaction can acquire them. If not we just send a transactionAborted exception, which will be
+		handled. 
 	
 2. Discuss and justify any changes you made to the API.
 	No, We didn’t change any given APIs.
+	
+3. Describe any missing or incomplete elements of your code.
+	Completed all the exercises given in the project description and ran the Junit tests accordingly to verify the implementations.
+	
+4. Describe how long you spent on the project, and whether there was anything you found particularly difficult or confusing.
+	Overall we have spent around 20-22 hrs for proj5. We have spent most of our time debugging the lock error we were getting.
+	It was very hard to debug because it wasn't happening all the time.
